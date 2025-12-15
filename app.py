@@ -15,7 +15,7 @@ def get_summary_from_url(url):
         video_id = url.split('watch?v=')[-1]
         transcript = ytapi.fetch(video_id)
     except Exception as e:
-        transcript = YouTubeTranscriptApi.fetch(video_id)
+        transcript = ytapi.fetch(video_id)
 
     prompt = ""
     for snipet in transcript:
@@ -50,23 +50,15 @@ def get_summary_from_url(url):
 #flask app routes
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    # If the HTML form action is "/" (default in some versions), handle the POST here
     if request.method == 'POST':
         return summarize()
     return render_template('index.html')
 
 @app.route('/summarize', methods=['GET', 'POST'])
 def summarize():
-    # If someone tries to access /summarize directly via URL (GET), redirect to home to avoid 405 error
     if request.method == 'GET':
         return redirect(url_for('home'))
 
-    # The frontend form sends data as form-data, not JSON, because of the standard <form> submission.
-    # However, if using the previous JS logic, it sends JSON. 
-    # The provided HTML uses <form action="/" method="POST"> which sends form-data.
-    # BUT the provided python code uses `request.get_json()`.
-    # To support the provided HTML (which does a standard POST), we must check form data.
-    
     if request.is_json:
         data = request.get_json()
         video_url = data.get('url')
@@ -74,7 +66,6 @@ def summarize():
         video_url = request.form.get('url')
 
     if not video_url:
-        # If standard form submit, we render template with error
         if not request.is_json:
             return render_template('index.html', error='Please provide a valid URL', url_value='')
         return jsonify({'error': 'Please provide a valid URL'}), 400
@@ -82,7 +73,6 @@ def summarize():
     try:
         summary_text = get_summary_from_url(video_url)
         
-        # If standard form submit, render template with summary
         if not request.is_json:
              return render_template('index.html', summary=summary_text, url_value=video_url)
              
